@@ -50,6 +50,18 @@ class FeedbackDecision(str, Enum):
     rejected = "Rejected"
 
 
+class ReviewStatus(str, Enum):
+    not_reviewed = "NotReviewed"
+    approved = "Approved"
+    approved_edited = "ApprovedEdited"
+    rejected = "Rejected"
+
+
+class CostStatus(str, Enum):
+    computed = "Computed"
+    manual_costing_required = "ManualCostingRequired"
+
+
 # --- Change Request intake -------------------------------------------------
 
 class ChangeRequestCreate(BaseModel):
@@ -118,11 +130,39 @@ class RiskItem(BaseModel):
     mitigation: str
 
 
+class EffortEstimateDraft(BaseModel):
+    """AI-estimated portion of the effort estimate, before the deterministic
+    overhead defaults (Change Management, Enhancement/Coordination) and cost
+    lookup are applied by app/agents/effort_calculator.py."""
+
+    analysis_design_days: float = Field(ge=0)
+    build_days: float = Field(ge=0)
+    testing_sit_days: float = Field(ge=0)
+    uat_support_days: float = Field(ge=0)
+    complexity: str
+    confidence: float = Field(ge=0, le=1)
+    rationale: str
+
+
 class EffortEstimate(BaseModel):
-    analysis_hours: float
+    """All figures in days (8 hours = 1 day). analysis_design_days through
+    uat_support_days are AI-estimated; change_management_days and
+    enhancement_coordination_days are deterministic defaults pulled from
+    EffortSettings (configurable on the Settings page), not model output."""
+
+    analysis_design_days: float = Field(ge=0)
+    build_days: float = Field(ge=0)  # Build (Dev & Unit Testing)
+    testing_sit_days: float = Field(ge=0)
+    uat_support_days: float = Field(ge=0)
+    change_management_days: float = Field(ge=0)  # Change Management (SNOW) — default 0.50
+    enhancement_coordination_days: float = Field(ge=0)  # Enhancement/Project Coordination — default 0.20
+    total_days: float = Field(ge=0)
     complexity: str  # Low | Medium | High
     confidence: float = Field(ge=0, le=1)
     rationale: str
+    cost_status: CostStatus
+    cost_eur: Optional[float] = None
+    cost_band_label: Optional[str] = None
 
 
 # --- Regression / test recommendation (Test Agent) --------------------------
@@ -162,23 +202,53 @@ class AnalysisRunOut(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     result: Optional[AnalysisResult] = None
+    ai_original_result: Optional[AnalysisResult] = None
+    review_status: ReviewStatus
+    decided_by: Optional[str] = None
+    decided_at: Optional[datetime] = None
+    decision_comment: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
-# --- Feedback -----------------------------------------------------------------
+# --- Feedback / review decision -----------------------------------------------
 
 class FeedbackCreate(BaseModel):
     user: str
     decision: FeedbackDecision
     comment: Optional[str] = None
+    # Required when decision == "Edited": the Tech Lead's edited findings,
+    # replacing the AI-generated result on this run (original is preserved
+    # in ai_original_result for audit).
+    edited_result: Optional[AnalysisResult] = None
 
 
-class FeedbackOut(FeedbackCreate):
+class FeedbackOut(BaseModel):
     id: int
     run_id: int
+    user: str
+    decision: FeedbackDecision
+    comment: Optional[str] = None
     timestamp: datetime
 
     class Config:
         from_attributes = True
+
+
+# --- Effort/cost settings (Settings page) --------------------------------------
+
+class CostBand(BaseModel):
+    """A row in the cost lookup table: if total_days < upper_bound_days, this
+    band's cost_eur applies (first match wins, bands must be given in
+    ascending upper_bound_days order)."""
+
+    label: str
+    upper_bound_days: float = Field(gt=0)
+    cost_eur: float = Field(ge=0)
+
+
+class EffortSettings(BaseModel):
+    change_management_default_days: float = Field(ge=0, default=0.50)
+    enhancement_coordination_default_days: float = Field(ge=0, default=0.20)
+    cost_bands: list[CostBand]

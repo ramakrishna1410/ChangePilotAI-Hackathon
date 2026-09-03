@@ -80,8 +80,33 @@ npm run dev                 # http://localhost:5173
    to every finding.
 4. The **Needs Validation** tab surfaces anything the Validation stage
    flagged as unsupported by evidence or low-confidence.
-5. Use **Accept / Accept with edits / Reject** to record the Tech Lead's
-   review — persisted via the feedback endpoint.
+5. Check the **Effort** tab: a full SDLC effort breakdown in days (8h = 1
+   day) — Analysis & Design, Build (Dev & Unit Testing), Testing (SIT), UAT
+   Support are AI-estimated; Change Management (SNOW, default 0.50d) and
+   Enhancement/Project Coordination (default 0.20d) are fixed defaults from
+   Settings — plus the total days and the resulting EUR cost from the
+   configured cost bands.
+6. Use **Accept / Accept with edits / Reject**:
+   - **Accept** locks the run and marks the CR "Approved" — read-only from
+     then on.
+   - **Accept with edits** opens an inline form to adjust the effort days
+     per phase (cost recalculates live) and each impacted component's
+     impact level, then saves your edited version as the run's result
+     (the original AI output is preserved for audit) and locks the run as
+     "Approved (Edited)".
+   - **Reject** marks the run/CR "Rejected" and — unlike Accept — leaves
+     "Re-run Analysis" available so you can try again.
+   - Once a run is decided, it's locked: submitting feedback on it again
+     returns an error; start a new analysis run instead.
+
+### 4. Settings page
+
+Click **Settings** from the dashboard to edit the cost bands (label, upper
+bound in days, EUR cost — first band where `total_days < upper_bound` wins;
+totals at or beyond the largest band show "Manual costing required") and the
+two overhead defaults (Change Management, Enhancement/Project Coordination).
+Changes apply to analysis runs started after the save — update these
+periodically as rates change.
 
 ## Architecture mapping
 
@@ -91,12 +116,14 @@ npm run dev                 # http://localhost:5173
 | Application understanding / RAG | §3.2, §6 | `backend/app/ingestion/`, `backend/app/rag/retriever.py` |
 | Impact analysis | §3.3 | `backend/app/agents/impact_agent.py` |
 | Dependency/risk analysis | §3.4 | `dependency_agent.py`, `risk_effort_agent.py` |
-| Effort estimation | §3.5 | `risk_effort_agent.py` (`EffortEstimate`) |
+| Effort estimation (AI days) | §3.5 | `risk_effort_agent.py` (`EffortEstimateDraft`) |
+| Effort/cost roll-up (overhead + EUR) | §3.5, §13 | `agents/effort_calculator.py` (deterministic, not LLM) |
+| Configurable cost settings | — | `api/routes_settings.py`, `frontend/src/pages/Settings.tsx` |
 | Regression recommendation | §3.6 | `test_agent.py` |
 | Explainability/evidence | §3.7 | `EvidenceRef` on every finding; `validation_agent.py` |
 | Orchestrator + specialist agents | §4, §5.1 | `orchestrator.py` |
 | Data model | §7 | `backend/app/models.py`, `backend/app/db.py` |
-| MVP UX screens | §9 | `frontend/src/pages/*`, `components/*` |
+| MVP UX screens + review workflow | §9 | `frontend/src/pages/*`, `components/ReviewPanel.tsx`, `api/routes_feedback.py` |
 
 ## Path to production (out of scope for this MVP)
 
@@ -123,3 +150,10 @@ Per §8 and §16 of the design doc, before any enterprise rollout:
   good enough for semantic-unit chunking on a small sample app, not robust
   against arbitrary production codebases.
 - No authentication on the API or dashboard.
+- The EUR cost bands and overhead-day defaults are illustrative starting
+  values (per §13 of the doc, "should be replaced with measured project
+  data where available") — update them on the Settings page to match real
+  rates before relying on the cost figure for anything.
+- "Accept with edits" lets the Tech Lead override effort days and impact
+  levels; it does not yet support editing risks, dependencies, or test
+  scenarios inline — those still go through the free-text review comment.

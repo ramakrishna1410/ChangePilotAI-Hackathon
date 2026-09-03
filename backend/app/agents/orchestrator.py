@@ -6,16 +6,19 @@ hackathon-MVP note.
 """
 from app.agents import (
     dependency_agent,
+    effort_calculator,
     impact_agent,
     requirement_agent,
     risk_effort_agent,
     test_agent,
     validation_agent,
 )
-from app.models import AnalysisResult
+from app.models import AnalysisResult, EffortSettings
 
 
-def run_analysis(application: str, summary: str, description: str) -> AnalysisResult:
+def run_analysis(
+    application: str, summary: str, description: str, effort_settings: EffortSettings
+) -> AnalysisResult:
     requirement = requirement_agent.run(application, summary, description)
 
     impacted_items, evidence_chunks = impact_agent.run(
@@ -24,7 +27,8 @@ def run_analysis(application: str, summary: str, description: str) -> AnalysisRe
 
     dependencies = dependency_agent.run(impacted_items, evidence_chunks)
 
-    risks, effort_estimate = risk_effort_agent.run(impacted_items, dependencies, evidence_chunks)
+    risks, effort_draft = risk_effort_agent.run(impacted_items, dependencies, evidence_chunks)
+    effort_estimate = effort_calculator.compute(effort_draft, effort_settings)
 
     test_scenarios = test_agent.run(
         requirement.objective, requirement.acceptance_criteria, impacted_items, evidence_chunks

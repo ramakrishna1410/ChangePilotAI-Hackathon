@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.orchestrator import run_analysis
 from app.config import CHAT_MODEL
-from app.db import AnalysisRun, ChangeRequest, get_session
+from app.db import AnalysisRun, ChangeRequest, get_session, load_effort_settings
 from app.models import AnalysisRunOut
 
 router = APIRouter(prefix="/analysis-runs", tags=["analysis-runs"])
@@ -36,7 +36,8 @@ def start_analysis(cr_id: int, session: Session = Depends(_session)):
     session.refresh(run)
 
     try:
-        result = run_analysis(cr.application, cr.summary, cr.description)
+        effort_settings = load_effort_settings(session)
+        result = run_analysis(cr.application, cr.summary, cr.description, effort_settings)
         run.result = result.model_dump(mode="json")
         run.status = "Completed"
         run.completed_at = datetime.utcnow()

@@ -2,7 +2,7 @@
 connection string in production (§7 data model uses the same shapes)."""
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, create_engine
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from app.config import DB_PATH
@@ -39,7 +39,15 @@ class AnalysisRun(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    ai_original_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+    # Review workflow: once review_status leaves "NotReviewed" the run is
+    # locked (Approved/ApprovedEdited) or reopened for a fresh run (Rejected).
+    review_status: Mapped[str] = mapped_column(String(20), default="NotReviewed")
+    decided_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decision_comment: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
 
 class Feedback(Base):
@@ -53,8 +61,47 @@ class Feedback(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+DEFAULT_COST_BANDS = [
+    {"label": "< 1 day", "upper_bound_days": 1, "cost_eur": 170},
+    {"label": "1-2 days", "upper_bound_days": 2, "cost_eur": 273},
+    {"label": "2-5 days", "upper_bound_days": 5, "cost_eur": 505},
+    {"label": "5-10 days", "upper_bound_days": 10, "cost_eur": 1282},
+    {"label": "10-15 days", "upper_bound_days": 15, "cost_eur": 3300},
+    {"label": "15-20 days", "upper_bound_days": 20, "cost_eur": 4442},
+]
+
+
+class EffortSettingsRow(Base):
+    """Single-row table (id is always 1) holding the configurable effort/cost
+    settings edited on the Settings page."""
+
+    __tablename__ = "effort_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    change_management_default_days: Mapped[float] = mapped_column(Float, default=0.50)
+    enhancement_coordination_default_days: Mapped[float] = mapped_column(Float, default=0.20)
+    cost_bands: Mapped[list] = mapped_column(JSON, default=lambda: DEFAULT_COST_BANDS)
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    with SessionLocal() as session:
+        if session.get(EffortSettingsRow, 1) is None:
+            session.add(EffortSettingsRow(id=1))
+            session.commit()
+
+
+def load_effort_settings(session: Session):
+    """Reads the singleton EffortSettingsRow and returns it as the
+    app.models.EffortSettings pydantic shape used by the orchestrator."""
+    from app.models import CostBand, EffortSettings  # local import avoids a module-load cycle
+
+    row = session.get(EffortSettingsRow, 1)
+    return EffortSettings(
+        change_management_default_days=row.change_management_default_days,
+        enhancement_coordination_default_days=row.enhancement_coordination_default_days,
+        cost_bands=[CostBand.model_validate(b) for b in row.cost_bands],
+    )
 
 
 def get_session() -> Session:

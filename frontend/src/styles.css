@@ -127,6 +127,9 @@ h2 { font-size: 17px; margin: 24px 0 12px; }
 .badge-priority-low { background: #eef0f4; color: var(--text-muted); }
 .badge-status-new { background: #eef0f4; }
 .badge-status-analyzed { background: #e3f3e6; color: var(--success); }
+.badge-status-approved { background: #e3f3e6; color: var(--success); }
+.badge-status-approvededited { background: #fff1cc; color: var(--warning); }
+.badge-status-rejected { background: #fde2e1; color: var(--danger); }
 
 .evidence-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 
@@ -149,3 +152,34 @@ h2 { font-size: 17px; margin: 24px 0 12px; }
 .approval-confirm { color: var(--success); font-size: 13px; }
 
 .error-text { color: var(--danger); }
+
+.settings-grid { display: flex; gap: 20px; margin: 12px 0 24px; flex-wrap: wrap; }
+.settings-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.settings-grid input { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; width: 160px; }
+
+.settings-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.settings-table th { text-align: left; font-size: 12px; color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.settings-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.settings-table input { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+
+.review-banner {
+  margin-top: 32px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.review-banner-approved { background: #e3f3e6; border-color: var(--success); }
+.review-banner-approvededited { background: #fff1cc; border-color: var(--warning); }
+.review-banner-rejected { background: #fde2e1; border-color: var(--danger); }
+
+.effort-table { width: 100%; border-collapse: collapse; }
+.effort-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.effort-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.effort-table tr.effort-total td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; }
+.effort-cost { font-size: 22px; font-weight: 700; margin: 16px 0 4px; }
+
+.edit-form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.edit-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.edit-form input, .edit-form select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.edit-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.edit-row select { font: inherit; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; }

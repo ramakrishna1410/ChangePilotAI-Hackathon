@@ -43,10 +43,31 @@ export interface RiskItem {
 }
 
 export interface EffortEstimate {
-  analysis_hours: number;
+  analysis_design_days: number;
+  build_days: number;
+  testing_sit_days: number;
+  uat_support_days: number;
+  change_management_days: number;
+  enhancement_coordination_days: number;
+  total_days: number;
   complexity: string;
   confidence: number;
   rationale: string;
+  cost_status: "Computed" | "ManualCostingRequired";
+  cost_eur?: number | null;
+  cost_band_label?: string | null;
+}
+
+export interface CostBand {
+  label: string;
+  upper_bound_days: number;
+  cost_eur: number;
+}
+
+export interface EffortSettings {
+  change_management_default_days: number;
+  enhancement_coordination_default_days: number;
+  cost_bands: CostBand[];
 }
 
 export interface TestScenario {
@@ -80,6 +101,8 @@ export interface AnalysisResult {
   needs_validation: ValidationFinding[];
 }
 
+export type ReviewStatus = "NotReviewed" | "Approved" | "ApprovedEdited" | "Rejected";
+
 export interface AnalysisRun {
   id: number;
   change_request_id: number;
@@ -88,6 +111,11 @@ export interface AnalysisRun {
   started_at: string;
   completed_at?: string | null;
   result?: AnalysisResult | null;
+  ai_original_result?: AnalysisResult | null;
+  review_status: ReviewStatus;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  decision_comment?: string | null;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -120,9 +148,18 @@ export const api = {
   getAnalysisRun: (runId: number) => request<AnalysisRun>(`/analysis-runs/${runId}`),
   listAnalysisRuns: (crId?: number) =>
     request<AnalysisRun[]>(`/analysis-runs${crId ? `?change_request_id=${crId}` : ""}`),
-  submitFeedback: (runId: number, payload: { user: string; decision: string; comment?: string }) =>
-    request(`/analysis-runs/${runId}/feedback`, {
+  submitFeedback: (
+    runId: number,
+    payload: { user: string; decision: "Accepted" | "Edited" | "Rejected"; comment?: string; edited_result?: AnalysisResult }
+  ) =>
+    request<AnalysisRun>(`/analysis-runs/${runId}/feedback`, {
       method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getEffortSettings: () => request<EffortSettings>("/settings/effort"),
+  updateEffortSettings: (payload: EffortSettings) =>
+    request<EffortSettings>("/settings/effort", {
+      method: "PUT",
       body: JSON.stringify(payload),
     }),
 };

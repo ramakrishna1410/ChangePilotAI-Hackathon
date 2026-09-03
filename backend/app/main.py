@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import routes_analysis, routes_cr, routes_feedback
+from app.api import routes_analysis, routes_cr, routes_feedback, routes_settings
 from app.db import init_db
 
 app = FastAPI(title="ChangePilot AI", version="0.1.0")
@@ -16,6 +16,7 @@ app.add_middleware(
 app.include_router(routes_cr.router)
 app.include_router(routes_analysis.router)
 app.include_router(routes_feedback.router)
+app.include_router(routes_settings.router)
 
 
 @app.on_event("startup")

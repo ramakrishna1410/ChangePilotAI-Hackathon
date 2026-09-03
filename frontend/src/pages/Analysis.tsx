@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnalysisRun, ChangeRequest, api } from "../api/client";
 import { EvidenceBadges } from "../components/EvidencePanel";
-import { ApproveEditReject } from "../components/ApproveEditReject";
+import { ReviewPanel } from "../components/ReviewPanel";
 
 type Tab = "summary" | "impact" | "dependencies" | "risk" | "effort" | "regression" | "validation";
 
@@ -51,6 +51,7 @@ export function Analysis({
   }, [cr.id]);
 
   const result = run?.result;
+  const locked = run?.review_status === "Approved" || run?.review_status === "ApprovedEdited";
 
   return (
     <div className="page">
@@ -58,14 +59,24 @@ export function Analysis({
         <button className="btn btn-link" onClick={onBack}>
           ← Dashboard
         </button>
-        <button className="btn btn-secondary" onClick={startAnalysis} disabled={loading}>
-          {loading ? "Analyzing..." : "Re-run Analysis"}
-        </button>
+        {!locked && (
+          <button className="btn btn-secondary" onClick={startAnalysis} disabled={loading}>
+            {loading ? "Analyzing..." : "Re-run Analysis"}
+          </button>
+        )}
       </div>
       <h1>{cr.summary}</h1>
       <p className="cr-meta">
         {cr.application} · Priority: {cr.priority}
         {cr.service_now_id ? ` · ${cr.service_now_id}` : ""}
+        {run && run.review_status !== "NotReviewed" && (
+          <>
+            {" · "}
+            <span className={`badge badge-status-${run.review_status.toLowerCase()}`}>
+              {run.review_status === "ApprovedEdited" ? "Approved (Edited)" : run.review_status}
+            </span>
+          </>
+        )}
       </p>
 
       {loading && <p>Running orchestrator: requirement → impact (RAG) → dependencies → risk/effort → regression → validation...</p>}
@@ -175,7 +186,43 @@ export function Analysis({
             <div className="tab-panel">
               <h2>Effort Estimate</h2>
               <div className="finding-card">
-                <p className="effort-hours">{result.effort_estimate.analysis_hours} hours</p>
+                <table className="effort-table">
+                  <tbody>
+                    <tr>
+                      <td>Analysis &amp; Design</td>
+                      <td>{result.effort_estimate.analysis_design_days} d</td>
+                    </tr>
+                    <tr>
+                      <td>Build (Dev &amp; Unit Testing)</td>
+                      <td>{result.effort_estimate.build_days} d</td>
+                    </tr>
+                    <tr>
+                      <td>Testing (SIT)</td>
+                      <td>{result.effort_estimate.testing_sit_days} d</td>
+                    </tr>
+                    <tr>
+                      <td>UAT Support</td>
+                      <td>{result.effort_estimate.uat_support_days} d</td>
+                    </tr>
+                    <tr>
+                      <td>Change Management (SNOW)</td>
+                      <td>{result.effort_estimate.change_management_days} d</td>
+                    </tr>
+                    <tr>
+                      <td>Enhancement/Project Coordination</td>
+                      <td>{result.effort_estimate.enhancement_coordination_days} d</td>
+                    </tr>
+                    <tr className="effort-total">
+                      <td>Total</td>
+                      <td>{result.effort_estimate.total_days} d</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="effort-cost">
+                  {result.effort_estimate.cost_status === "Computed"
+                    ? `€${result.effort_estimate.cost_eur} (${result.effort_estimate.cost_band_label})`
+                    : "Manual costing required (≥ largest configured band)"}
+                </p>
                 <p>
                   Complexity: <strong>{result.effort_estimate.complexity}</strong> · Confidence:{" "}
                   {Math.round(result.effort_estimate.confidence * 100)}%
@@ -215,7 +262,7 @@ export function Analysis({
             </div>
           )}
 
-          {run && <ApproveEditReject runId={run.id} />}
+          {run && <ReviewPanel run={run} onUpdated={setRun} />}
         </>
       )}
     </div>

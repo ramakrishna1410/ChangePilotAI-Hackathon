@@ -4,9 +4,11 @@ import { api, ChangeRequest } from "../api/client";
 export function Dashboard({
   onSelectCr,
   onNewCr,
+  onSettings,
 }: {
   onSelectCr: (cr: ChangeRequest) => void;
   onNewCr: () => void;
+  onSettings: () => void;
 }) {
   const [crs, setCrs] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +24,14 @@ export function Dashboard({
     <div className="page">
       <div className="page-header">
         <h1>ChangePilot AI — Dashboard</h1>
-        <button className="btn btn-primary" onClick={onNewCr}>
-          + New Change Request
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-secondary" onClick={onSettings}>
+            Settings
+          </button>
+          <button className="btn btn-primary" onClick={onNewCr}>
+            + New Change Request
+          </button>
+        </div>
       </div>
       {loading && <p>Loading...</p>}
       {!loading && crs.length === 0 && (
