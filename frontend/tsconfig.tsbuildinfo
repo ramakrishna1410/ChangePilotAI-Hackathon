@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/api/client.ts","./src/components/ApproveEditReject.tsx","./src/components/EvidencePanel.tsx","./src/pages/Analysis.tsx","./src/pages/Dashboard.tsx","./src/pages/Intake.tsx"],"version":"5.9.3"}

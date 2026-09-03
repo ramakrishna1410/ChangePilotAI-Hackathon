@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+backend/changepilot.db
+backend/chroma_store/
+backend/.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+frontend/tsconfig.tsbuildinfo
