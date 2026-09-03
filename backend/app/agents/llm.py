@@ -31,7 +31,8 @@ def call_structured(system_prompt: str, user_prompt: str) -> dict:
     """
     response = _get_client().chat.completions.create(
         model=CHAT_MODEL,
-        temperature=0.2,
+        temperature=0,
+        seed=42,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},
