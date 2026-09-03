@@ -32,18 +32,36 @@ systems built from scratch. Do not add generic "enterprise project" padding (no 
 allowance for planning ceremonies, environment setup, deployment, documentation, etc. —
 those belong to change-management/coordination, already excluded above). Anchor your
 numbers on the actual number and kind of impacted components:
-   - 1-3 Direct-impact components, no schema change: analysis_design ~0.25-0.5,
-     build ~0.5-1.5, testing_sit ~0.25-0.75, uat_support ~0.25-0.5 (total ~1.5-3 days).
-   - 4-8 Direct-impact components OR one schema/stored-procedure change: analysis_design
-     ~0.5-1, build ~1.5-4, testing_sit ~0.5-2, uat_support ~0.5-1 (total ~3-8 days).
+   - 1-3 Direct-impact components, no schema change: build ~0.5-1.5, testing_sit
+     ~0.25-0.75, uat_support ~0.25-0.5 (subtotal of these three ~1-2.75 days).
+   - 4-8 Direct-impact components OR one schema/stored-procedure change: build ~1.5-4,
+     testing_sit ~0.5-2, uat_support ~0.5-1 (subtotal of these three ~2.5-7 days).
    - More than 8 Direct-impact components, multiple schema changes, or changes spanning
      several shared/cross-module services: scale up proportionally above these ranges —
-     this is the only case that should exceed ~10 days total across the four phases.
+     this is the only case that should exceed ~9 days across these three phases.
    Indirect and Potentially-Related impact items add much less effort than Direct ones
    (often just a regression check) — weight the estimate mainly by the Direct-impact
-   count, not the total impacted-item count. If you're about to output more than 8 days
-   combined for a change with 5 or fewer Direct-impact items, reconsider — that combination
-   should be rare.
+   count, not the total impacted-item count.
+
+ANALYSIS & DESIGN CALIBRATION — this is deliberately much smaller than it would be
+without this tool. ChangePilot AI has ALREADY done the traditionally expensive part of
+analysis — searching the codebase, finding impacted components, tracing dependencies,
+flagging risks (that's everything in the impacted-components and dependencies lists
+below, done by the Impact/Dependency agents before you). analysis_design_days is now
+just the Tech Lead's remaining review/validation/design time on top of that AI output,
+not a from-scratch investigation — this is the system's core value (per the business
+case: ~4 hours of manual analysis effort down to ~1 hour of AI-assisted review).
+Calibrate it much smaller than build/testing_sit/uat_support, scaling only slightly with
+review burden:
+   - 1-3 Direct-impact components, no schema change: analysis_design ~0.1-0.15 days
+     (roughly 1 hour) — validate a small, already-identified set of findings.
+   - 4-8 Direct-impact components OR one schema/stored-procedure change: analysis_design
+     ~0.15-0.3 days — more findings to validate, still no fresh investigation.
+   - More than 8 Direct-impact components or multiple schema changes: analysis_design
+     ~0.3-0.6 days — this is the only case that should exceed ~0.3 days.
+   Do not default back to old pre-AI habits like "0.5 days for analysis" — that number
+   describes a human doing the search themselves, which is exactly what this tool
+   already did.
 
 DATABASE IMPACT — check the impacted-components list below for any item with
 type "SqlObject". Each one represents a schema or stored-procedure change (read its
@@ -111,7 +129,7 @@ def run(
             continue
 
     effort_raw = data.get("effort_estimate") or {
-        "analysis_design_days": 0.5,
+        "analysis_design_days": 0.1,
         "build_days": 1,
         "testing_sit_days": 0.5,
         "uat_support_days": 0.25,
@@ -123,7 +141,7 @@ def run(
         draft = EffortEstimateDraft.model_validate(effort_raw)
     except Exception:
         draft = EffortEstimateDraft(
-            analysis_design_days=0.5,
+            analysis_design_days=0.1,
             build_days=1,
             testing_sit_days=0.5,
             uat_support_days=0.25,
