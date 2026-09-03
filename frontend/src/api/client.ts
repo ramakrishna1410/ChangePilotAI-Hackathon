@@ -66,7 +66,9 @@ export interface CostBand {
 
 export interface EffortSettings {
   change_management_default_days: number;
-  enhancement_coordination_default_days: number;
+  // Fraction (0-1) of the AI-estimated dev-effort subtotal (Analysis & Design +
+  // Build + Testing SIT + UAT Support), not a flat day count. Default 0.10 = 10%.
+  enhancement_coordination_percent: number;
   cost_bands: CostBand[];
 }
 

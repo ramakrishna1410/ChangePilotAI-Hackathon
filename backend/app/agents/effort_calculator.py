@@ -9,14 +9,11 @@ from app.models import CostStatus, EffortEstimate, EffortEstimateDraft, EffortSe
 
 
 def compute(draft: EffortEstimateDraft, settings: EffortSettings) -> EffortEstimate:
-    total_days = (
-        draft.analysis_design_days
-        + draft.build_days
-        + draft.testing_sit_days
-        + draft.uat_support_days
-        + settings.change_management_default_days
-        + settings.enhancement_coordination_default_days
+    dev_subtotal_days = (
+        draft.analysis_design_days + draft.build_days + draft.testing_sit_days + draft.uat_support_days
     )
+    enhancement_coordination_days = dev_subtotal_days * settings.enhancement_coordination_percent
+    total_days = dev_subtotal_days + settings.change_management_default_days + enhancement_coordination_days
 
     cost_eur: float | None = None
     cost_band_label: str | None = None
@@ -35,7 +32,7 @@ def compute(draft: EffortEstimateDraft, settings: EffortSettings) -> EffortEstim
         testing_sit_days=draft.testing_sit_days,
         uat_support_days=draft.uat_support_days,
         change_management_days=settings.change_management_default_days,
-        enhancement_coordination_days=settings.enhancement_coordination_default_days,
+        enhancement_coordination_days=round(enhancement_coordination_days, 2),
         total_days=round(total_days, 2),
         complexity=draft.complexity,
         confidence=draft.confidence,

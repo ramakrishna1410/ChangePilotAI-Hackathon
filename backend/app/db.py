@@ -79,7 +79,8 @@ class EffortSettingsRow(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, default=1)
     change_management_default_days: Mapped[float] = mapped_column(Float, default=0.50)
-    enhancement_coordination_default_days: Mapped[float] = mapped_column(Float, default=0.20)
+    # Fraction (0-1) of the AI-estimated dev-effort subtotal, not flat days — see EffortSettings.
+    enhancement_coordination_percent: Mapped[float] = mapped_column(Float, default=0.10)
     cost_bands: Mapped[list] = mapped_column(JSON, default=lambda: DEFAULT_COST_BANDS)
 
 
@@ -99,7 +100,7 @@ def load_effort_settings(session: Session):
     row = session.get(EffortSettingsRow, 1)
     return EffortSettings(
         change_management_default_days=row.change_management_default_days,
-        enhancement_coordination_default_days=row.enhancement_coordination_default_days,
+        enhancement_coordination_percent=row.enhancement_coordination_percent,
         cost_bands=[CostBand.model_validate(b) for b in row.cost_bands],
     )
 

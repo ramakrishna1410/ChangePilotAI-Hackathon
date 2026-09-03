@@ -250,5 +250,8 @@ class CostBand(BaseModel):
 
 class EffortSettings(BaseModel):
     change_management_default_days: float = Field(ge=0, default=0.50)
-    enhancement_coordination_default_days: float = Field(ge=0, default=0.20)
+    # Fraction (0-1), not a flat day count: Enhancement/Project Coordination
+    # days = enhancement_coordination_percent * (analysis_design_days +
+    # build_days + testing_sit_days + uat_support_days). Default 0.10 = 10%.
+    enhancement_coordination_percent: float = Field(ge=0, le=1, default=0.10)
     cost_bands: list[CostBand]

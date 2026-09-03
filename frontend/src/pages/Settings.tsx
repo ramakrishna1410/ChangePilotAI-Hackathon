@@ -73,14 +73,15 @@ export function Settings({ onBack }: { onBack: () => void }) {
           />
         </label>
         <label>
-          Enhancement / Project Coordination
+          Enhancement / Project Coordination (% of Analysis+Build+Testing+UAT)
           <input
             type="number"
-            step="0.05"
+            step="1"
             min="0"
-            value={settings.enhancement_coordination_default_days}
+            max="100"
+            value={Math.round(settings.enhancement_coordination_percent * 100)}
             onChange={(e) =>
-              setSettings({ ...settings, enhancement_coordination_default_days: Number(e.target.value) })
+              setSettings({ ...settings, enhancement_coordination_percent: Number(e.target.value) / 100 })
             }
           />
         </label>

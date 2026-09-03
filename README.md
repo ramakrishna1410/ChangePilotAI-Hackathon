@@ -82,10 +82,11 @@ npm run dev                 # http://localhost:5173
    flagged as unsupported by evidence or low-confidence.
 5. Check the **Effort** tab: a full SDLC effort breakdown in days (8h = 1
    day) — Analysis & Design, Build (Dev & Unit Testing), Testing (SIT), UAT
-   Support are AI-estimated; Change Management (SNOW, default 0.50d) and
-   Enhancement/Project Coordination (default 0.20d) are fixed defaults from
-   Settings — plus the total days and the resulting EUR cost from the
-   configured cost bands.
+   Support are AI-estimated; Change Management (SNOW) defaults to a fixed
+   0.50 days; Enhancement/Project Coordination defaults to 10% of the
+   Analysis+Build+Testing+UAT subtotal (not a flat day count) — both
+   configurable on the Settings page — plus the total days and the
+   resulting EUR cost from the configured cost bands.
 6. Use **Accept / Accept with edits / Reject**:
    - **Accept** locks the run and marks the CR "Approved" — read-only from
      then on.
@@ -103,8 +104,9 @@ npm run dev                 # http://localhost:5173
 
 Click **Settings** from the dashboard to edit the cost bands (label, upper
 bound in days, EUR cost — first band where `total_days < upper_bound` wins;
-totals at or beyond the largest band show "Manual costing required") and the
-two overhead defaults (Change Management, Enhancement/Project Coordination).
+totals at or beyond the largest band show "Manual costing required"), the
+Change Management default (flat days), and the Enhancement/Project
+Coordination percentage (of the Analysis+Build+Testing+UAT subtotal).
 Changes apply to analysis runs started after the save — update these
 periodically as rates change.
 
