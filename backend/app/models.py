@@ -248,6 +248,16 @@ class CostBand(BaseModel):
     cost_eur: float = Field(ge=0)
 
 
+class EffortRevisionRequest(BaseModel):
+    """Body for POST /analysis-runs/{run_id}/re-estimate-effort: the Tech
+    Lead's in-progress edits, sent to get an AI-revised effort estimate
+    before they save (they can still hand-tune the result afterward)."""
+
+    requirement: RequirementSummary
+    impacted_items: list[ImpactItem]
+    comment: Optional[str] = None
+
+
 class EffortSettings(BaseModel):
     change_management_default_days: float = Field(ge=0, default=0.50)
     # Fraction (0-1), not a flat day count: Enhancement/Project Coordination

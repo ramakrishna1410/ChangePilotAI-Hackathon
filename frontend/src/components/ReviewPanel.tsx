@@ -13,17 +13,34 @@ function computeCost(totalDays: number, bands: CostBand[]) {
   return { cost_status: "ManualCostingRequired" as const, cost_eur: null, cost_band_label: null };
 }
 
+function linesToList(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
 function EditForm({
+  runId,
   original,
   settings,
+  comment,
   onChange,
 }: {
+  runId: number;
   original: AnalysisResult;
   settings: EffortSettings;
+  comment: string;
   onChange: (result: AnalysisResult) => void;
 }) {
+  const [requirement, setRequirement] = useState({ ...original.requirement });
+  const [constraintsText, setConstraintsText] = useState(original.requirement.constraints.join("\n"));
+  const [acceptanceText, setAcceptanceText] = useState(original.requirement.acceptance_criteria.join("\n"));
   const [effort, setEffort] = useState({ ...original.effort_estimate });
   const [items, setItems] = useState<ImpactItem[]>(original.impacted_items.map((i) => ({ ...i })));
+  const [reEstimating, setReEstimating] = useState(false);
+  const [reEstimateError, setReEstimateError] = useState<string | null>(null);
+  const [lastRationale, setLastRationale] = useState<string | null>(null);
 
   const totalDays =
     effort.analysis_design_days +
@@ -37,6 +54,11 @@ function EditForm({
   useEffect(() => {
     onChange({
       ...original,
+      requirement: {
+        ...requirement,
+        constraints: linesToList(constraintsText),
+        acceptance_criteria: linesToList(acceptanceText),
+      },
       impacted_items: items,
       effort_estimate: {
         ...effort,
@@ -45,14 +67,66 @@ function EditForm({
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effort, items]);
+  }, [requirement, constraintsText, acceptanceText, effort, items]);
 
   function setDays(field: keyof typeof effort, value: string) {
     setEffort({ ...effort, [field]: Number(value) || 0 });
   }
 
+  async function reEstimate() {
+    setReEstimating(true);
+    setReEstimateError(null);
+    try {
+      const revised = await api.reEstimateEffort(runId, {
+        requirement: {
+          ...requirement,
+          constraints: linesToList(constraintsText),
+          acceptance_criteria: linesToList(acceptanceText),
+        },
+        impacted_items: items,
+        comment: comment || undefined,
+      });
+      setEffort(revised);
+      setLastRationale(revised.rationale);
+    } catch (err) {
+      setReEstimateError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReEstimating(false);
+    }
+  }
+
   return (
     <div className="edit-form">
+      <h4>Requirement</h4>
+      <label>
+        Objective
+        <textarea rows={2} value={requirement.objective} onChange={(e) => setRequirement({ ...requirement, objective: e.target.value })} />
+      </label>
+      <label>
+        Scope
+        <textarea rows={2} value={requirement.scope} onChange={(e) => setRequirement({ ...requirement, scope: e.target.value })} />
+      </label>
+      <label>
+        Constraints (one per line)
+        <textarea rows={2} value={constraintsText} onChange={(e) => setConstraintsText(e.target.value)} />
+      </label>
+      <label>
+        Acceptance criteria (one per line)
+        <textarea rows={2} value={acceptanceText} onChange={(e) => setAcceptanceText(e.target.value)} />
+      </label>
+
+      <div className="approval-actions">
+        <button type="button" className="btn btn-secondary" disabled={reEstimating} onClick={reEstimate}>
+          {reEstimating ? "Re-estimating..." : "Re-estimate with AI"}
+        </button>
+      </div>
+      {reEstimateError && <p className="error-text">{reEstimateError}</p>}
+      {lastRationale && (
+        <p className="cr-meta">
+          <strong>AI revision rationale:</strong> {lastRationale}
+        </p>
+      )}
+
       <h4>Effort (days, 8h = 1 day)</h4>
       {(
         [
@@ -185,7 +259,7 @@ export function ReviewPanel({ run, onUpdated }: { run: AnalysisRun; onUpdated: (
 
       {editing && run.result && (
         settings ? (
-          <EditForm original={run.result} settings={settings} onChange={setEditedResult} />
+          <EditForm runId={run.id} original={run.result} settings={settings} comment={comment} onChange={setEditedResult} />
         ) : (
           <p>Loading settings...</p>
         )

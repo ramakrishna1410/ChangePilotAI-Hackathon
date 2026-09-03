@@ -164,4 +164,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  reEstimateEffort: (
+    runId: number,
+    payload: { requirement: RequirementSummary; impacted_items: ImpactItem[]; comment?: string }
+  ) =>
+    request<EffortEstimate>(`/analysis-runs/${runId}/re-estimate-effort`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };

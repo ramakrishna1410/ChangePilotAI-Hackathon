@@ -19,6 +19,22 @@ SQL objects, config, docs) are potentially impacted by the requirement. For each
   (do not invent chunk ids). If you cannot ground a finding in the evidence, omit it.
 - give a confidence score between 0 and 1.
 
+Database impact — actively look for this, don't wait for the requirement to say "database"
+or "SQL": ask yourself whether fulfilling this requirement plausibly needs a new or changed
+database object — a new column, a new table, a changed stored-procedure signature, a new
+stored procedure, an index, etc. — even when the requirement text never mentions the
+database. If so:
+- Identify the EXISTING stored procedure/table from the evidence that is the closest
+  anchor for that change (e.g. the procedure that would need a new parameter, or the
+  procedure/table that owns the data the new column would live on), cite it as evidence,
+  set type to "SqlObject", and describe the specific schema/logic change needed in the
+  reason (e.g. "requires a new nullable ThresholdAmount column on dbo.Orders and a new
+  parameter on dbo.sp_UpdateOrderStatus to persist it").
+- Set impact_level to "Direct" if the schema change is required for this requirement to
+  work at all; "Indirect" if it's a likely-but-not-certain follow-on.
+- If no existing SQL evidence is closely related enough to anchor the finding, it's fine
+  to omit it — do not invent a chunk_id for evidence that doesn't exist.
+
 Respond ONLY with a JSON object: {"impacted_items": [
   {"type": string, "name": string, "path": string, "impact_level": string,
    "reason": string, "evidence_refs": [{"chunk_id": string, "source_path": string, "symbol": string}],

@@ -90,10 +90,15 @@ npm run dev                 # http://localhost:5173
 6. Use **Accept / Accept with edits / Reject**:
    - **Accept** locks the run and marks the CR "Approved" — read-only from
      then on.
-   - **Accept with edits** opens an inline form to adjust the effort days
-     per phase (cost recalculates live) and each impacted component's
-     impact level, then saves your edited version as the run's result
-     (the original AI output is preserved for audit) and locks the run as
+   - **Accept with edits** opens an inline form to edit the requirement
+     (objective/scope/constraints/acceptance criteria), each impacted
+     component's impact level, and the effort days per phase (cost
+     recalculates live). A **"Re-estimate with AI"** button sends your
+     edits (plus the review comment) back to the Risk & Effort Agent,
+     which returns revised day numbers and a rationale explaining what
+     changed and why — you can still hand-tune the numbers afterward.
+     Saving stores your final version as the run's result (the original
+     AI output is preserved for audit) and locks the run as
      "Approved (Edited)".
    - **Reject** marks the run/CR "Rejected" and — unlike Accept — leaves
      "Re-run Analysis" available so you can try again.
@@ -116,11 +121,12 @@ periodically as rates change.
 |---|---|---|
 | CR intake | §3.1 | `POST /change-requests`, `frontend/src/pages/Intake.tsx` |
 | Application understanding / RAG | §3.2, §6 | `backend/app/ingestion/`, `backend/app/rag/retriever.py` |
-| Impact analysis | §3.3 | `backend/app/agents/impact_agent.py` |
+| Impact analysis (incl. proactive DB/schema detection) | §3.3 | `backend/app/agents/impact_agent.py` |
 | Dependency/risk analysis | §3.4 | `dependency_agent.py`, `risk_effort_agent.py` |
 | Effort estimation (AI days) | §3.5 | `risk_effort_agent.py` (`EffortEstimateDraft`) |
 | Effort/cost roll-up (overhead + EUR) | §3.5, §13 | `agents/effort_calculator.py` (deterministic, not LLM) |
 | Configurable cost settings | — | `api/routes_settings.py`, `frontend/src/pages/Settings.tsx` |
+| AI-assisted effort re-estimate on Tech Lead edits | §3.5 | `api/routes_effort.py` (`POST /analysis-runs/{id}/re-estimate-effort`) |
 | Regression recommendation | §3.6 | `test_agent.py` |
 | Explainability/evidence | §3.7 | `EvidenceRef` on every finding; `validation_agent.py` |
 | Orchestrator + specialist agents | §4, §5.1 | `orchestrator.py` |
@@ -156,6 +162,20 @@ Per §8 and §16 of the design doc, before any enterprise rollout:
   values (per §13 of the doc, "should be replaced with measured project
   data where available") — update them on the Settings page to match real
   rates before relying on the cost figure for anything.
-- "Accept with edits" lets the Tech Lead override effort days and impact
-  levels; it does not yet support editing risks, dependencies, or test
-  scenarios inline — those still go through the free-text review comment.
+- "Accept with edits" lets the Tech Lead edit the requirement, impact
+  levels, and effort days (with an AI "Re-estimate" assist); it does not
+  yet support editing risks, dependencies, or test scenarios inline —
+  those still go through the free-text review comment.
+- All agent LLM calls use `temperature=0` + a fixed seed for consistent
+  repeat runs — OpenAI documents this as "mostly deterministic," not a
+  hard guarantee, so rare small variation between runs of the same input
+  is possible.
+- Effort/cost numbers (including the AI re-estimate) are calibrated on
+  general engineering judgment, not validated against this
+  organization's actual historical change-request effort — treat them as
+  a starting estimate for Tech Lead review, not a guaranteed figure, per
+  §10 Phase 7 and §17 of the doc.
+- DB/schema impact detection (Impact Agent proactively flagging implied
+  column/table/procedure changes) only reasons from what's already
+  indexed from `sample-app/` — it can't invent awareness of database
+  objects that aren't in the indexed evidence.
