@@ -3,6 +3,7 @@ uvicorn[standard]==0.30.6
 pydantic==2.9.2
 sqlalchemy==2.0.35
 openai==1.51.0
+httpx<0.28
 chromadb==0.5.15
 python-dotenv==1.0.1
 python-multipart==0.0.9
