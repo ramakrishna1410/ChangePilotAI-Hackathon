@@ -38,7 +38,12 @@ stay the same.
 sample-app/     Small representative ASP.NET Core app (order-approval workflow) —
                 the RAG target. Not built/run; it's indexed as source content.
 backend/        FastAPI service: ingestion, RAG, agents/orchestrator, API.
+  tests/        pytest suite — effort math, chunker, review workflow, settings
+                audit trail, and the orchestrator wired end-to-end with LLM
+                calls mocked (no OpenAI key needed to run tests).
 frontend/       React/Vite dashboard: CR intake, analysis tabs, evidence, approval.
+.github/workflows/ci.yml   Runs the backend test suite + compile check, and
+                            the frontend type-check + build, on every push/PR.
 ```
 
 See the design doc's Section 5 (architecture) and Section 7 (data model) for
@@ -68,7 +73,21 @@ npm install
 npm run dev                 # http://localhost:5173
 ```
 
-### 3. Demo flow (mirrors Section 21 of the doc)
+### 3. Running the test suite
+
+```bash
+cd backend
+python -m pytest tests/ -v
+```
+
+No `OPENAI_API_KEY` needed — the agent-pipeline test mocks the LLM call boundary
+(`app.agents.llm.call_structured`) with canned responses, so it verifies the real
+orchestrator wiring (data flowing correctly between agents, evidence-ref filtering,
+the deterministic effort/cost calculation) without making network calls. Tests run
+against an isolated temp SQLite DB/Chroma path, never your local `changepilot.db`.
+This same suite runs automatically on every push/PR via `.github/workflows/ci.yml`.
+
+### 4. Demo flow (mirrors Section 21 of the doc)
 
 1. Open the dashboard, click **New Change Request**. A representative CR is
    pre-filled: *"Add order-approval threshold business rule"* — matching the
@@ -105,7 +124,7 @@ npm run dev                 # http://localhost:5173
    - Once a run is decided, it's locked: submitting feedback on it again
      returns an error; start a new analysis run instead.
 
-### 4. Settings page
+### 5. Settings page
 
 Click **Settings** from the dashboard to edit the cost bands (label, upper
 bound in days, EUR cost — first band where `total_days < upper_bound` wins;
@@ -113,7 +132,10 @@ totals at or beyond the largest band show "Manual costing required"), the
 Change Management default (flat days), and the Enhancement/Project
 Coordination percentage (of the Analysis+Build+Testing+UAT subtotal).
 Changes apply to analysis runs started after the save — update these
-periodically as rates change.
+periodically as rates change. Enter your name/email before saving — every
+save is recorded in the **Change history** list below the form (who, when,
+and the before/after values), since there's no login system to attribute
+changes automatically.
 
 ## Architecture mapping
 
@@ -125,7 +147,7 @@ periodically as rates change.
 | Dependency/risk analysis | §3.4 | `dependency_agent.py`, `risk_effort_agent.py` |
 | Effort estimation (AI days) | §3.5 | `risk_effort_agent.py` (`EffortEstimateDraft`) |
 | Effort/cost roll-up (overhead + EUR) | §3.5, §13 | `agents/effort_calculator.py` (deterministic, not LLM) |
-| Configurable cost settings | — | `api/routes_settings.py`, `frontend/src/pages/Settings.tsx` |
+| Configurable cost settings + audit trail | §8 (audit intent) | `api/routes_settings.py`, `EffortSettingsHistory` in `db.py` |
 | AI-assisted effort re-estimate on Tech Lead edits | §3.5 | `api/routes_effort.py` (`POST /analysis-runs/{id}/re-estimate-effort`) |
 | Regression recommendation | §3.6 | `test_agent.py` |
 | Explainability/evidence | §3.7 | `EvidenceRef` on every finding; `validation_agent.py` |
@@ -179,3 +201,11 @@ Per §8 and §16 of the design doc, before any enterprise rollout:
   column/table/procedure changes) only reasons from what's already
   indexed from `sample-app/` — it can't invent awareness of database
   objects that aren't in the indexed evidence.
+- The `tests/` suite (run in CI on every push) covers effort/cost math,
+  chunking, the review-decision workflow, settings + audit trail, and the
+  orchestrator's wiring with the LLM boundary mocked — it verifies the
+  code is internally correct, not that the AI's actual judgment (which
+  components are impacted, how many days something takes) is accurate.
+  There's no automated eval against real historical CRs yet (see the
+  point above); that would need to call the real OpenAI API against known
+  outcomes, which isn't something CI does today.

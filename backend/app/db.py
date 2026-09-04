@@ -84,6 +84,19 @@ class EffortSettingsRow(Base):
     cost_bands: Mapped[list] = mapped_column(JSON, default=lambda: DEFAULT_COST_BANDS)
 
 
+class EffortSettingsHistory(Base):
+    """Audit trail of every Settings-page save: who changed the cost bands /
+    overhead defaults, when, and the full before/after snapshot."""
+
+    __tablename__ = "effort_settings_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    changed_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    previous: Mapped[dict] = mapped_column(JSON)
+    new: Mapped[dict] = mapped_column(JSON)
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     with SessionLocal() as session:

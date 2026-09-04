@@ -5,6 +5,8 @@ __pycache__/
 backend/changepilot.db
 backend/chroma_store/
 backend/.env
+backend/.pytest_cache/
+.pytest_cache/
 
 # Node
 node_modules/

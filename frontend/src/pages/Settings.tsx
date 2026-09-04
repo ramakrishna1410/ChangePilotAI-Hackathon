@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { CostBand, EffortSettings, api } from "../api/client";
+import { CostBand, EffortSettings, EffortSettingsHistoryEntry, api } from "../api/client";
 
 export function Settings({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<EffortSettings | null>(null);
+  const [changedBy, setChangedBy] = useState("");
+  const [history, setHistory] = useState<EffortSettingsHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  function loadHistory() {
+    api.getEffortSettingsHistory().then(setHistory).catch(() => {});
+  }
 
   useEffect(() => {
     api
@@ -14,6 +20,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
       .then(setSettings)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
+    loadHistory();
   }, []);
 
   function updateBand(index: number, field: keyof CostBand, value: string) {
@@ -32,9 +39,10 @@ export function Settings({ onBack }: { onBack: () => void }) {
     setError(null);
     setSaved(false);
     try {
-      const updated = await api.updateEffortSettings(settings);
+      const updated = await api.updateEffortSettings({ ...settings, changed_by: changedBy || undefined });
       setSettings(updated);
       setSaved(true);
+      loadHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -135,11 +143,40 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </tbody>
       </table>
 
+      <label style={{ display: "block", marginBottom: 12 }}>
+        Your name/email (recorded in the change history below)
+        <input
+          value={changedBy}
+          onChange={(e) => setChangedBy(e.target.value)}
+          placeholder="tech.lead@cognizant.com"
+          style={{ display: "block", marginTop: 6, width: 320 }}
+        />
+      </label>
+
       {error && <p className="error-text">{error}</p>}
       {saved && <p className="approval-confirm">Settings saved.</p>}
       <button className="btn btn-primary" onClick={save} disabled={saving}>
         {saving ? "Saving..." : "Save Settings"}
       </button>
+
+      <h2>Change history</h2>
+      {history.length === 0 && <p className="cr-meta">No changes recorded yet.</p>}
+      {history.map((h) => (
+        <div key={h.id} className="finding-card">
+          <div className="finding-header">
+            <strong>{h.changed_by || "(no name given)"}</strong>
+            <span className="cr-meta">{new Date(h.timestamp).toLocaleString()}</span>
+          </div>
+          <p>
+            Change Mgmt: {h.previous.change_management_default_days}d → {h.new.change_management_default_days}d
+            {" · "}
+            Coordination: {Math.round(h.previous.enhancement_coordination_percent * 100)}% →{" "}
+            {Math.round(h.new.enhancement_coordination_percent * 100)}%
+            {" · "}
+            Cost bands: {h.previous.cost_bands.length} → {h.new.cost_bands.length}
+          </p>
+        </div>
+      ))}
     </div>
   );
 }

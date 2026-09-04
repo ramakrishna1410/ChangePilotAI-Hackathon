@@ -70,6 +70,15 @@ export interface EffortSettings {
   // Build + Testing SIT + UAT Support), not a flat day count. Default 0.10 = 10%.
   enhancement_coordination_percent: number;
   cost_bands: CostBand[];
+  changed_by?: string | null;
+}
+
+export interface EffortSettingsHistoryEntry {
+  id: number;
+  timestamp: string;
+  changed_by?: string | null;
+  previous: EffortSettings;
+  new: EffortSettings;
 }
 
 export interface TestScenario {
@@ -164,6 +173,7 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  getEffortSettingsHistory: () => request<EffortSettingsHistoryEntry[]>("/settings/effort/history"),
   reEstimateEffort: (
     runId: number,
     payload: { requirement: RequirementSummary; impacted_items: ImpactItem[]; comment?: string }
